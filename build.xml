@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="create_run_jar" name="Create Runnable Jar for Project Chemistry">
+    <!--this file was created by Eclipse Runnable JAR Export Wizard-->
+    <!--ANT 1.7 is required                                        -->
+    <target name="create_run_jar">
+        <jar destfile="/localhome/lwestin/Downloads/RedoxChem.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="com.pi.chem.RedoxEquation"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset dir="/windows/Users/westin/Programming/chem-workspace/Chemistry/bin"/>
+        </jar>
+    </target>
+</project>
