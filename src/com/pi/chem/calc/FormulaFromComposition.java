@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
 
-import com.pi.chem.Element;
+import com.pi.chem.db.Element;
 
 public class FormulaFromComposition {
 	public static void main(String[] args) throws IOException {

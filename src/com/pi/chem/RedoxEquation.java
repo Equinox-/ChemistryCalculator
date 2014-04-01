@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.pi.chem.db.Element;
+
 public class RedoxEquation {
 	private static final RedoxMolecule[] IONIC_MOLECULES = { new RedoxMolecule(
 			"H2O", 0) };
@@ -28,24 +30,6 @@ public class RedoxEquation {
 	private List<RedoxMolecule> balancedLeft = new ArrayList<RedoxMolecule>();
 	private List<RedoxMolecule> balancedRight = new ArrayList<RedoxMolecule>();
 	private int electronsExchanged;
-
-	public static void main(String[] args) {
-		if (args.length != 2) {
-			System.out.println("program [left side] [right side]");
-			args = new String[] { "FeBr2 + Br2", "FeBr3" };
-			// return;
-		}
-		RedoxEquation e = new RedoxEquation(args[0], args[1]);
-		System.out.println("Reduce: " + e.getReducedElement() + ", Oxidize: "
-				+ e.getOxidizedElement());
-		e.balance();
-		System.out.println();
-		System.out.print(Arrays.toString(e.balancedLeft.toArray()));
-		System.out.print("\t->\t");
-		System.out.println(Arrays.toString(e.balancedRight.toArray()));
-		System.out
-				.println("Gained/Lost " + e.electronsExchanged + " electrons");
-	}
 
 	public static List<RedoxMolecule> createRedoxList(List<Molecule> orig) {
 		List<RedoxMolecule> m = new ArrayList<RedoxMolecule>();
@@ -357,62 +341,66 @@ public class RedoxEquation {
 		}
 		electronsExchanged = (int) OMath.lcm(Math.abs(reduction.leftElectrons),
 				Math.abs(oxidation.leftElectrons));
-		int rMult = (int) (electronsExchanged / Math
+		int rMult = (int) (getElectronsExchanged() / Math
 				.abs(reduction.leftElectrons));
-		int oMult = (int) (electronsExchanged / Math
+		int oMult = (int) (getElectronsExchanged() / Math
 				.abs(oxidation.leftElectrons));
 		System.out.println("Reduction multiplier: " + rMult
 				+ ", Oxidation multiplier: " + oMult);
-		balancedLeft.clear();
-		balancedRight.clear();
+		getBalancedLeft().clear();
+		getBalancedRight().clear();
 		out: for (RedoxMolecule m : oxidation.left) {
-			for (RedoxMolecule m2 : balancedLeft) {
+			for (RedoxMolecule m2 : getBalancedLeft()) {
 				if (m2.eqn.equals(m.eqn)) {
 					m2.charge += m.charge;
 					m2.multiplier += m.multiplier;
 					continue out;
 				}
 			}
-			balancedLeft.add(new RedoxMolecule(m.eqn, m.charge * oMult,
-					m.multiplier * oMult));
+			getBalancedLeft().add(
+					new RedoxMolecule(m.eqn, m.charge * oMult, m.multiplier
+							* oMult));
 		}
 		out: for (RedoxMolecule m : oxidation.right) {
-			for (RedoxMolecule m2 : balancedRight) {
+			for (RedoxMolecule m2 : getBalancedRight()) {
 				if (m2.eqn.equals(m.eqn)) {
 					m2.charge += m.charge;
 					m2.multiplier += m.multiplier;
 					continue out;
 				}
 			}
-			balancedRight.add(new RedoxMolecule(m.eqn, m.charge * oMult,
-					m.multiplier * oMult));
+			getBalancedRight().add(
+					new RedoxMolecule(m.eqn, m.charge * oMult, m.multiplier
+							* oMult));
 		}
 		out: for (RedoxMolecule m : reduction.left) {
-			for (RedoxMolecule m2 : balancedLeft) {
+			for (RedoxMolecule m2 : getBalancedLeft()) {
 				if (m2.eqn.equals(m.eqn)) {
 					m2.charge += m.charge;
 					m2.multiplier += m.multiplier;
 					continue out;
 				}
 			}
-			balancedLeft.add(new RedoxMolecule(m.eqn, m.charge * rMult,
-					m.multiplier * rMult));
+			getBalancedLeft().add(
+					new RedoxMolecule(m.eqn, m.charge * rMult, m.multiplier
+							* rMult));
 		}
 		out: for (RedoxMolecule m : reduction.right) {
-			for (RedoxMolecule m2 : balancedRight) {
+			for (RedoxMolecule m2 : getBalancedRight()) {
 				if (m2.eqn.equals(m.eqn)) {
 					m2.charge += m.charge;
 					m2.multiplier += m.multiplier;
 					continue out;
 				}
 			}
-			balancedRight.add(new RedoxMolecule(m.eqn, m.charge * rMult,
-					m.multiplier * rMult));
+			getBalancedRight().add(
+					new RedoxMolecule(m.eqn, m.charge * rMult, m.multiplier
+							* rMult));
 		}
 
 		// Combine those equivalent pieces
-		combineEquals(balancedLeft);
-		combineEquals(balancedRight);
+		combineEquals(getBalancedLeft());
+		combineEquals(getBalancedRight());
 
 		// We could now like... combine ionic
 		combineIonicChunks();
@@ -421,13 +409,13 @@ public class RedoxEquation {
 		cancelEquals();
 
 		// Drop 0s
-		Iterator<RedoxMolecule> itr = balancedLeft.listIterator();
+		Iterator<RedoxMolecule> itr = getBalancedLeft().listIterator();
 		while (itr.hasNext()) {
 			if (itr.next().multiplier == 0) {
 				itr.remove();
 			}
 		}
-		itr = balancedRight.listIterator();
+		itr = getBalancedRight().listIterator();
 		while (itr.hasNext()) {
 			if (itr.next().multiplier == 0) {
 				itr.remove();
@@ -450,9 +438,9 @@ public class RedoxEquation {
 	}
 
 	private void cancelEquals() {
-		for (RedoxMolecule m : balancedLeft) {
-			for (RedoxMolecule m2 : balancedRight) {
-				if (m.eqn.equals(m2.eqn)) {
+		for (RedoxMolecule m : getBalancedLeft()) {
+			for (RedoxMolecule m2 : getBalancedRight()) {
+				if (m.eqn.equals(m2.eqn) && m.charge == m2.charge) {
 					if (m2.multiplier >= m.multiplier) {
 						m2.multiplier -= m.multiplier;
 						m.multiplier = 0;
@@ -470,7 +458,7 @@ public class RedoxEquation {
 			{
 				List<RedoxMolecule> claiming = new ArrayList<RedoxMolecule>();
 				int count = Integer.MAX_VALUE;
-				for (RedoxMolecule rm : balancedLeft) {
+				for (RedoxMolecule rm : getBalancedLeft()) {
 					try {
 						Element e = Element.valueOf(rm.eqn);
 						if (e != null && m.counts.containsKey(e)
@@ -485,7 +473,7 @@ public class RedoxEquation {
 				if (count != Integer.MAX_VALUE
 						&& claiming.size() == m.counts.keySet().size()) {
 					// Ok drop those we are using and add the new one
-					balancedLeft.add(new RedoxMolecule(m.eqn, 0, count));
+					getBalancedLeft().add(new RedoxMolecule(m.eqn, 0, count));
 					for (RedoxMolecule mod : claiming) {
 						mod.multiplier -= count
 								* m.counts.get(Element.valueOf(mod.eqn));
@@ -495,7 +483,7 @@ public class RedoxEquation {
 			{
 				List<RedoxMolecule> claiming = new ArrayList<RedoxMolecule>();
 				int count = Integer.MAX_VALUE;
-				for (RedoxMolecule rm : balancedRight) {
+				for (RedoxMolecule rm : getBalancedRight()) {
 					try {
 						Element e = Element.valueOf(rm.eqn);
 						if (e != null && m.counts.containsKey(e)
@@ -510,7 +498,7 @@ public class RedoxEquation {
 				if (count != Integer.MAX_VALUE
 						&& claiming.size() == m.counts.keySet().size()) {
 					// Ok drop those we are using and add the new one
-					balancedRight.add(new RedoxMolecule(m.eqn, 0, count));
+					getBalancedRight().add(new RedoxMolecule(m.eqn, 0, count));
 					for (RedoxMolecule mod : claiming) {
 						mod.multiplier -= count
 								* m.counts.get(Element.valueOf(mod.eqn));
@@ -526,5 +514,17 @@ public class RedoxEquation {
 
 	public Element getOxidizedElement() {
 		return oxidized;
+	}
+
+	public List<RedoxMolecule> getBalancedLeft() {
+		return balancedLeft;
+	}
+
+	public List<RedoxMolecule> getBalancedRight() {
+		return balancedRight;
+	}
+
+	public int getElectronsExchanged() {
+		return electronsExchanged;
 	}
 }

@@ -1,4 +1,6 @@
-package com.pi.chem;
+package com.pi.chem.db;
+
+import com.pi.chem.OxidationNumber;
 
 public enum Element implements OxidationNumber {
 	H("hydrogen", 1.008f, new float[] { 1.0f, -1.0f }, new float[] { -1.0f,
@@ -15,7 +17,7 @@ public enum Element implements OxidationNumber {
 			"fluorine", 18.998404f, new float[] { -1.0f },
 			new float[] { -1.0f }), Ne("neon", 20.1797f, new float[] {},
 			new float[] {}), Na("sodium", 22.989769f, new float[] { 1.0f },
-			new float[] { -1.0f, 1.0f }), Mg("magnesium", 24.305f,
+			new float[] { 1.0f, -1.0f }), Mg("magnesium", 24.305f,
 			new float[] { 2.0f }, new float[] { 1.0f, 2.0f }), Al("aluminium",
 			26.981539f, new float[] { 3.0f }, new float[] { 1.0f, 2.0f, 3.0f }), Si(
 			"silicon", 28.085f, new float[] { 4.0f }, new float[] { -4.0f,
@@ -177,6 +179,24 @@ public enum Element implements OxidationNumber {
 
 	public float[] getAllOxidationNumbers() {
 		return oxidation;
+	}
+
+	public boolean isCommonOxidationNumber(float f) {
+		for (float j : commonOxidation) {
+			if (f == j) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public boolean isOxidationNumber(float f) {
+		for (float j : oxidation) {
+			if (f == j) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override

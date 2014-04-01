@@ -4,10 +4,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.pi.chem.db.Element;
+
 public class Molecule {
+	public enum MoleculeType {
+		MOLECULAR, IONIC;
+	}
+
 	private static final Pattern IMPLOSION = Pattern
 			.compile("\\((.*?)\\)([0-9]+)");
 	private String equation;
@@ -31,27 +38,28 @@ public class Molecule {
 		explodedEquation = explodeMolecule(s.substring(offset).trim());
 		calculateElementCounts();
 	}
-	
+
 	public void calculateCharges() {
-		charges = EquationParser.getChargesInMolecule(explodedEquation, overallCharge);
+		charges = EquationParser.getChargesInMolecule(explodedEquation,
+				overallCharge);
 	}
-	
+
 	public float getOverallCharge() {
 		return overallCharge;
 	}
-	
+
 	public String getEquation() {
 		return equation;
 	}
-	
+
 	public String getExplodedEquation() {
 		return explodedEquation;
 	}
-	
+
 	public Map<Element, Integer> getElementCounts() {
 		return counts;
 	}
-	
+
 	public Map<Element, Float> getElementCharges() {
 		return charges;
 	}
@@ -118,5 +126,21 @@ public class Molecule {
 			cnt++;
 			counts.put(e, cnt);
 		}
+	}
+
+	private void calculateMoleculeType() {
+
+	}
+	
+	public String toString() {
+		StringBuilder content = new StringBuilder();
+		for (Entry<Element, Integer> i : counts.entrySet()) {
+			content.append(i.getKey().name());
+			int count = i.getValue().intValue();
+			if (count > 1) {
+				content.append(count);
+			}
+		}
+		return content.toString();
 	}
 }

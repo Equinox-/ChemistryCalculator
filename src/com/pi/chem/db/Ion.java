@@ -1,4 +1,6 @@
-package com.pi.chem;
+package com.pi.chem.db;
+
+import com.pi.chem.OxidationNumber;
 
 public enum Ion implements OxidationNumber {
 	Acetate("CH3COO", -1), Chlorate("ClO3", -1), Chlorite("ClO3", -1), Cyanide(

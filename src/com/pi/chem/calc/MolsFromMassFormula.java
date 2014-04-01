@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.util.Map.Entry;
 import java.util.Scanner;
 
-import com.pi.chem.Element;
 import com.pi.chem.MetricConversion;
 import com.pi.chem.Molecule;
+import com.pi.chem.db.Element;
 
 public class MolsFromMassFormula {
 	public static void main(String[] args) throws IOException {

@@ -1,6 +1,5 @@
 package com.pi.chem;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -9,6 +8,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.pi.chem.db.Element;
+import com.pi.chem.db.Ion;
 
 public class EquationParser {
 	public static List<Molecule> getMoleculesInEquation(String eq) {
@@ -122,29 +124,43 @@ public class EquationParser {
 			idx.put(e, 0);
 		}
 		Map<Element, Float> charges;
+		boolean useRareCharges = false;
 		do {
 			charges = getChargesInHomoMoleculeInternal(elements, counts,
-					overall, idx);
+					overall, idx, useRareCharges);
 			// Advance by 1
+			boolean broke = false;
 			for (Entry<Element, Integer> o : idx.entrySet()) {
-				if (o.getValue() + 1 < o.getKey().getCommonOxidationNumbers().length) {
+				if (o.getValue() + 1 < (useRareCharges ? o.getKey()
+						.getAllOxidationNumbers().length : o.getKey()
+						.getCommonOxidationNumbers().length)) {
 					o.setValue(o.getValue() + 1);
+					broke = true;
 					break;
 				} else {
 					o.setValue(0);
 				}
 			}
-		} while (hasSketchyCharge(charges));
+			if (!broke) {
+				if (useRareCharges) {
+					break;
+				} else {
+					useRareCharges = true;
+				}
+			}
+		} while (invalidChargeConfiguration(charges, counts, overall));
 		return charges;
 	}
 
 	private static Map<Element, Float> getChargesInHomoMoleculeInternal(
 			List<Element> elements, Map<Element, Integer> counts,
-			float overall, Map<Element, Integer> idxs) {
+			float overall, Map<Element, Integer> idxs, boolean useRareCharges) {
 		Map<Element, Float> charges = new HashMap<Element, Float>();
 		float missingCharge = overall;
 		if (counts.containsKey(Element.O)) {
-			float[] standard = Element.O.getCommonOxidationNumbers();
+			float[] standard = useRareCharges ? Element.O
+					.getAllOxidationNumbers() : Element.O
+					.getCommonOxidationNumbers();
 			if (standard.length > 0) {
 				Integer i = idxs.get(Element.O);
 				int idx = i != null ? i.intValue() : 0;
@@ -154,7 +170,9 @@ public class EquationParser {
 			}
 		}
 		if (counts.containsKey(Element.H)) {
-			float[] standard = Element.H.getCommonOxidationNumbers();
+			float[] standard = useRareCharges ? Element.H
+					.getAllOxidationNumbers() : Element.H
+					.getCommonOxidationNumbers();
 			if (standard.length > 0) {
 				Integer i = idxs.get(Element.H);
 				int idx = i != null ? i.intValue() : 0;
@@ -168,7 +186,9 @@ public class EquationParser {
 					|| counts.size() - charges.size() <= 1) {
 				continue;
 			}
-			float[] standard = obj.getKey().getCommonOxidationNumbers();
+			float[] standard = useRareCharges ? obj.getKey()
+					.getAllOxidationNumbers() : obj.getKey()
+					.getCommonOxidationNumbers();
 			if (standard.length > 0) {
 				Integer i = idxs.get(obj.getKey());
 				int idx = i != null ? i.intValue() : 0;
@@ -179,8 +199,13 @@ public class EquationParser {
 		}
 		for (Entry<Element, Integer> e : counts.entrySet()) {
 			if (!charges.containsKey(e.getKey())) {
-				charges.put(e.getKey(), missingCharge
-						/ e.getValue().floatValue());
+				float possibleCharge = missingCharge
+						/ e.getValue().floatValue();
+				if (useRareCharges || possibleCharge == 0f
+						|| e.getKey().isCommonOxidationNumber(possibleCharge)) {
+					charges.put(e.getKey(), possibleCharge);
+					break;
+				}
 			}
 		}
 		return charges;
@@ -205,19 +230,30 @@ public class EquationParser {
 			}
 		}
 		MapUtilities.addToMap(charges, getChargesInHomoMolecule(s, iCharge));
-		if (hasSketchyCharge(charges)) {
+		List<Element> elements = getElementsInMolecule(eq);
+		Map<Element, Integer> counts = getElementCounts(elements);
+		if (invalidChargeConfiguration(charges, counts, overall)) {
 			charges = getChargesInHomoMolecule(eq, overall);
 		}
 		return charges;
 	}
 
-	public static boolean hasSketchyCharge(Map<Element, Float> charges) {
+	public static boolean invalidChargeConfiguration(
+			Map<Element, Float> charges, Map<Element, Integer> counts,
+			float overall) {
+		float totalCharge = 0;
 		for (Entry<Element, Float> e : charges.entrySet()) {
+			// Check for non integer charges
 			if (Math.abs(e.getValue().floatValue() - e.getValue().intValue()) > 0.0) {
 				return true;
 			}
+			if (!counts.containsKey(e.getKey())) {
+				continue;
+			}
+			totalCharge += e.getValue().floatValue()
+					* counts.get(e.getKey()).floatValue();
 		}
-		return false;
+		return overall != totalCharge;
 	}
 
 	public static Map<Element, Float> getChargesInEquation(String eq) {
