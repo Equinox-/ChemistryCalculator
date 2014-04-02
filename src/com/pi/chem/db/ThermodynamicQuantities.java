@@ -3,6 +3,8 @@ package com.pi.chem.db;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.pi.chem.Molecule;
+
 public class ThermodynamicQuantities {
 	private static class ThermodynamicValue {
 		private float heatFormation;
@@ -125,6 +127,7 @@ public class ThermodynamicQuantities {
 		put("Ni(s)", 0, 0, 29.9);
 		put("NiCl2(s)", -305.3, -259, 97.65);
 		put("NiO(s)", -239.7, -211.7, 37.99);
+		put("NiS(s)", Float.NaN, Float.NaN, 53.0);
 		put("Pb(s)", 0, 0, 68.85);
 		put("PbBr2(s)", -277.4, -260.7, 161);
 		put("PbCO3(s)", -699.1, -625.5, 131);
@@ -252,7 +255,7 @@ public class ThermodynamicQuantities {
 		put("S8(g)", 102.3, 49.7, 430.9);
 		put("SO2(g)", -296.9, -300.4, 248.5);
 		put("SO3(g)", -395.2, -370.4, 256.2);
-		put("SO42-1aq2", -909.3, -744.5, 20.1);
+		put("SO4 2- (aq)", -909.3, -744.5, 20.1);
 		put("SOCl2(l)", -245.6, Float.NaN, Float.NaN);
 		put("H2S(g)", -20.17, -33.01, 205.6);
 		put("H2SO4(aq)", -909.3, -744.5, 20.1);

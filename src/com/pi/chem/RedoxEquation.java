@@ -46,7 +46,7 @@ public class RedoxEquation {
 		leftCharges = new HashMap<Element, Float>();
 		for (RedoxMolecule s : leftMolecules) {
 			MapUtilities.addToMap(leftCharges,
-					EquationParser.getChargesInMolecule(s.eqn, s.charge));
+					ChargeComputer.getChargesInMolecule(s.eqn, s.charge));
 		}
 
 		rightMolecules = createRedoxList(EquationParser
@@ -54,7 +54,7 @@ public class RedoxEquation {
 		rightCharges = new HashMap<Element, Float>();
 		for (RedoxMolecule s : rightMolecules) {
 			MapUtilities.addToMap(rightCharges,
-					EquationParser.getChargesInMolecule(s.eqn, s.charge));
+					ChargeComputer.getChargesInMolecule(s.eqn, s.charge));
 		}
 		System.out.println("Left Charges: "
 				+ Arrays.toString(leftCharges.entrySet().toArray()));

@@ -22,6 +22,7 @@ public class Molecule {
 	private float overallCharge;
 	private Map<Element, Float> charges = new HashMap<Element, Float>();
 	private Map<Element, Integer> counts = new HashMap<Element, Integer>();
+	private Phase phase;
 
 	public Molecule(String s) {
 		int offset = 0;
@@ -35,12 +36,22 @@ public class Molecule {
 				}
 			}
 		}
-		explodedEquation = explodeMolecule(s.substring(offset).trim());
+		s = s.substring(offset).trim();
+		phase = Phase.findPhase(s);
+		if (phase != null) {
+			s = s.replace("(" + phase.getAbbreviation() + ")", "").trim();
+		}
+		equation = s;
+		explodedEquation = explodeMolecule(s);
 		calculateElementCounts();
 	}
 
+	public Phase getPhase() {
+		return phase;
+	}
+
 	public void calculateCharges() {
-		charges = EquationParser.getChargesInMolecule(explodedEquation,
+		charges = ChargeComputer.getChargesInMolecule(explodedEquation,
 				overallCharge);
 	}
 
@@ -131,7 +142,7 @@ public class Molecule {
 	private void calculateMoleculeType() {
 
 	}
-	
+
 	public String toString() {
 		StringBuilder content = new StringBuilder();
 		for (Entry<Element, Integer> i : counts.entrySet()) {
@@ -142,5 +153,23 @@ public class Molecule {
 			}
 		}
 		return content.toString();
+	}
+
+	public int hashCode() {
+		int i = 0;
+		for (Entry<Element, Integer> cc : counts.entrySet()) {
+			i += cc.getKey().ordinal() ^ cc.getValue().intValue();
+		}
+		return i;
+	}
+
+	public boolean equals(Object o) {
+		if (o instanceof Molecule) {
+			Molecule m = (Molecule) o;
+			return m.getPhase() == getPhase()
+					&& m.getElementCounts().equals(getElementCounts())
+					&& overallCharge == m.getOverallCharge();
+		}
+		return false;
 	}
 }
