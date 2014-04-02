@@ -3,8 +3,6 @@ package com.pi.chem.db;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.pi.chem.Molecule;
-
 public class ThermodynamicQuantities {
 	private static class ThermodynamicValue {
 		private float heatFormation;

@@ -1,7 +1,6 @@
 package com.pi.chem;
 
 import java.util.List;
-import java.util.regex.Pattern;
 
 import com.pi.chem.db.ThermodynamicQuantities;
 
@@ -57,11 +56,16 @@ public class GenericEquation {
 		return totalEntropy;
 	}
 
-	public float getGibbsFreeEnergy() {
-		return (float) (getEntropy() + (-getReactionHeat() / 298.15));
+	public float getGibbsFreeEnergy(float temperature) {
+		return (float) (getReactionHeat() - (getEntropy() * temperature));
 	}
 
-	public float getStandardReactionConstant() {
-		return (float) Math.exp(getGibbsFreeEnergy() / (.008314 * 298.15));
+	public float getStandardReactionConstant(float temperature) {
+		return (float) Math.exp(getGibbsFreeEnergy(temperature)
+				/ (.008314 * temperature));
+	}
+
+	public float getTotalEntropy(float temperature) {
+		return (getEntropy() - (getReactionHeat() / temperature));
 	}
 }
