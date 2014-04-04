@@ -12,7 +12,7 @@ import com.pi.chem.db.Element;
 
 public class RedoxEquation {
 	private static final RedoxMolecule[] IONIC_MOLECULES = { new RedoxMolecule(
-			"H2O", 0) };
+			"H2O", 0, null) };
 	private List<RedoxMolecule> leftMolecules;
 	private Map<Element, Float> leftCharges;
 	private List<String> claimedLeftMolecules = new ArrayList<String>();
@@ -35,26 +35,25 @@ public class RedoxEquation {
 		List<RedoxMolecule> m = new ArrayList<RedoxMolecule>();
 		for (Molecule s : orig) {
 			m.add(new RedoxMolecule(s.getExplodedEquation(), s
-					.getOverallCharge()));
+					.getOverallCharge(), null));
 		}
 		return m;
 	}
 
 	public RedoxEquation(String left, String right) {
-		leftMolecules = createRedoxList(EquationParser
-				.getMoleculesInEquation(left));
+		GenericEquation equation = new GenericEquation(left + "->" + right);
+		leftMolecules = createRedoxList(equation.leftMolecules);
 		leftCharges = new HashMap<Element, Float>();
 		for (RedoxMolecule s : leftMolecules) {
 			MapUtilities.addToMap(leftCharges,
-					ChargeComputer.getChargesInMolecule(s.eqn, s.charge));
+					ChargeComputer.getChargesInMolecule(s));
 		}
 
-		rightMolecules = createRedoxList(EquationParser
-				.getMoleculesInEquation(right));
+		rightMolecules = createRedoxList(equation.rightMolecules);
 		rightCharges = new HashMap<Element, Float>();
 		for (RedoxMolecule s : rightMolecules) {
 			MapUtilities.addToMap(rightCharges,
-					ChargeComputer.getChargesInMolecule(s.eqn, s.charge));
+					ChargeComputer.getChargesInMolecule(s));
 		}
 		System.out.println("Left Charges: "
 				+ Arrays.toString(leftCharges.entrySet().toArray()));
@@ -86,43 +85,25 @@ public class RedoxEquation {
 		oxidation.generate();
 	}
 
-	private static class RedoxMolecule {
-		private float charge;
-		private String eqn;
-		private int multiplier = 1;
-		private Map<Element, Integer> counts;
+	private static class RedoxMolecule extends Molecule {
+		private int multiplier;
 
-		private RedoxMolecule() {
+		private RedoxMolecule(String eq, float charge, Phase phase) {
+			this(eq, charge, phase, 1);
 		}
 
-		private RedoxMolecule(String eq, float charge) {
-			this(eq, charge, 1);
-		}
-
-		private RedoxMolecule(String eq, float charge, int mult) {
-			this.eqn = eq;
-			this.charge = charge;
-			this.multiplier = mult;
-			updateCounts();
-		}
-
-		private void updateCounts() {
-			counts = EquationParser.getElementCounts(EquationParser
-					.getElementsInMolecule(eqn));
-			for (Entry<Element, Integer> e : counts.entrySet()) {
-				e.setValue(e.getValue() * multiplier);
-			}
+		private RedoxMolecule(String eq, float charge, Phase phase, int mult) {
+			super(eq, charge, phase);
 		}
 
 		public String toString() {
-			return multiplier + eqn;
+			return multiplier + super.getEquation();
 		}
 
 		public boolean equals(Object o) {
 			if (o instanceof RedoxMolecule) {
 				RedoxMolecule rm = (RedoxMolecule) o;
-				return rm.eqn.equals(eqn) && rm.multiplier == multiplier
-						&& rm.charge == charge;
+				return super.equals(o) && rm.multiplier == multiplier;
 			}
 			return false;
 		}
@@ -146,23 +127,23 @@ public class RedoxEquation {
 			right = new ArrayList<RedoxMolecule>();
 			rightCounts = new HashMap<Element, Integer>();
 			for (RedoxMolecule e : leftMolecules) {
-				if (e.counts.containsKey(using)
-						&& !claimedLeftMolecules.contains(e.eqn)) {
-					claimedLeftMolecules.add(e.eqn);
-					left.add(new RedoxMolecule(e.eqn, e.charge));
-					MapUtilities.mapSum(leftCounts, (EquationParser
-							.getElementCounts(EquationParser
-									.getElementsInMolecule(e.eqn))));
+				if (e.getElementCounts().containsKey(using)
+						&& !claimedLeftMolecules.contains(e.getEquation())) {
+					claimedLeftMolecules.add(e.getEquation());
+					left.add(new RedoxMolecule(e.getEquation(), e
+							.getOverallCharge(), null));
+					MapUtilities.mapSum(leftCounts, e.getElementCounts(),
+							e.multiplier);
 				}
 			}
 			for (RedoxMolecule e : rightMolecules) {
-				if (e.counts.containsKey(using)
-						&& !claimedRightMolecules.contains(e.eqn)) {
-					claimedRightMolecules.add(e.eqn);
-					right.add(new RedoxMolecule(e.eqn, e.charge));
-					MapUtilities.mapSum(rightCounts, EquationParser
-							.getElementCounts(EquationParser
-									.getElementsInMolecule(e.eqn)));
+				if (e.getElementCounts().containsKey(using)
+						&& !claimedRightMolecules.contains(e.getEquation())) {
+					claimedRightMolecules.add(e.getEquation());
+					right.add(new RedoxMolecule(e.getEquation(), e
+							.getOverallCharge(), null));
+					MapUtilities.mapSum(rightCounts, e.getElementCounts(),
+							e.multiplier);
 				}
 			}
 		}
@@ -171,10 +152,12 @@ public class RedoxEquation {
 			leftCounts.clear();
 			rightCounts.clear();
 			for (RedoxMolecule m : left) {
-				MapUtilities.mapSum(leftCounts, m.counts);
+				MapUtilities.mapSum(leftCounts, m.getElementCounts(),
+						m.multiplier);
 			}
 			for (RedoxMolecule m : right) {
-				MapUtilities.mapSum(rightCounts, m.counts);
+				MapUtilities.mapSum(rightCounts, m.getElementCounts(),
+						m.multiplier);
 			}
 		}
 
@@ -192,15 +175,15 @@ public class RedoxEquation {
 						int bTot = (int) OMath.lcm(i.floatValue(),
 								i2.floatValue());
 						for (RedoxMolecule m : left) {
-							if (m.counts.containsKey(e)) {
-								m.multiplier = bTot / m.counts.get(e);
-								m.updateCounts();
+							if (m.getElementCounts().containsKey(e)) {
+								m.multiplier = bTot
+										/ m.getElementCounts().get(e);
 							}
 						}
 						for (RedoxMolecule m : right) {
-							if (m.counts.containsKey(e)) {
-								m.multiplier = bTot / m.counts.get(e);
-								m.updateCounts();
+							if (m.getElementCounts().containsKey(e)) {
+								m.multiplier = bTot
+										/ m.getElementCounts().get(e);
 							}
 						}
 						updateCounts();
@@ -214,10 +197,10 @@ public class RedoxEquation {
 			float leftCharge = 0;
 			float rightCharge = 0;
 			for (RedoxMolecule m : left) {
-				leftCharge += m.charge;
+				leftCharge += m.getOverallCharge() * m.multiplier;
 			}
 			for (RedoxMolecule m : right) {
-				rightCharge += m.charge;
+				rightCharge += m.getOverallCharge() * m.multiplier;
 			}
 			leftElectrons = leftCharge - rightCharge;
 
@@ -247,20 +230,19 @@ public class RedoxEquation {
 				}
 				// First try to use other molecules
 				for (RedoxMolecule s : rightMolecules) {
-					if (s.counts.containsKey(e)
-							&& !claimedRightMolecules.contains(s.eqn)) {
+					if (s.getElementCounts().containsKey(e)
+							&& !claimedRightMolecules.contains(s.getEquation())) {
 						int count = (leftCounts.get(e) - rightCounts.get(e))
-								/ s.counts.get(e);
-						right.add(new RedoxMolecule(s.eqn, s.charge * count,
-								count));
-						claimedRightMolecules.add(s.eqn);
+								/ s.getElementCounts().get(e);
+						right.add(new RedoxMolecule(s.getEquation(), s
+								.getOverallCharge(), null, count));
+						claimedRightMolecules.add(s.getEquation());
 						updateCounts();
 						return true;
 					}
 				}
-				right.add(new RedoxMolecule(e.name(), leftCharges.get(e)
-						* (leftCounts.get(e) - rightCounts.get(e)), leftCounts
-						.get(e) - rightCounts.get(e)));
+				right.add(new RedoxMolecule(e.name(), leftCharges.get(e), null,
+						leftCounts.get(e) - rightCounts.get(e)));
 				updateCounts();
 				return true;
 			}
@@ -276,20 +258,19 @@ public class RedoxEquation {
 				}
 				// First try to use other molecules
 				for (RedoxMolecule s : leftMolecules) {
-					if (s.counts.containsKey(e)
-							&& !claimedLeftMolecules.contains(s.eqn)) {
+					if (s.getElementCounts().containsKey(e)
+							&& !claimedLeftMolecules.contains(s.getEquation())) {
 						int count = (rightCounts.get(e) - leftCounts.get(e))
-								/ s.counts.get(e);
-						left.add(new RedoxMolecule(s.eqn, s.charge * count,
-								count));
-						claimedLeftMolecules.add(s.eqn);
+								/ s.getElementCounts().get(e);
+						left.add(new RedoxMolecule(s.getEquation(), s
+								.getOverallCharge(), null, count));
+						claimedLeftMolecules.add(s.getEquation());
 						updateCounts();
 						return true;
 					}
 				}
-				left.add(new RedoxMolecule(e.name(), rightCharges.get(e)
-						* (rightCounts.get(e) - leftCounts.get(e)), rightCounts
-						.get(e) - leftCounts.get(e)));
+				left.add(new RedoxMolecule(e.name(), rightCharges.get(e), null,
+						rightCounts.get(e) - leftCounts.get(e)));
 				updateCounts();
 				return true;
 			}
@@ -351,51 +332,47 @@ public class RedoxEquation {
 		getBalancedRight().clear();
 		out: for (RedoxMolecule m : oxidation.left) {
 			for (RedoxMolecule m2 : getBalancedLeft()) {
-				if (m2.eqn.equals(m.eqn)) {
-					m2.charge += m.charge;
+				if (m2.getEquation().equals(m.getEquation())) {
 					m2.multiplier += m.multiplier;
 					continue out;
 				}
 			}
 			getBalancedLeft().add(
-					new RedoxMolecule(m.eqn, m.charge * oMult, m.multiplier
-							* oMult));
+					new RedoxMolecule(m.getEquation(), m.getOverallCharge(),
+							null, m.multiplier * oMult));
 		}
 		out: for (RedoxMolecule m : oxidation.right) {
 			for (RedoxMolecule m2 : getBalancedRight()) {
-				if (m2.eqn.equals(m.eqn)) {
-					m2.charge += m.charge;
+				if (m2.getEquation().equals(m.getEquation())) {
 					m2.multiplier += m.multiplier;
 					continue out;
 				}
 			}
 			getBalancedRight().add(
-					new RedoxMolecule(m.eqn, m.charge * oMult, m.multiplier
-							* oMult));
+					new RedoxMolecule(m.getEquation(), m.getOverallCharge(),
+							null, m.multiplier * oMult));
 		}
 		out: for (RedoxMolecule m : reduction.left) {
 			for (RedoxMolecule m2 : getBalancedLeft()) {
-				if (m2.eqn.equals(m.eqn)) {
-					m2.charge += m.charge;
+				if (m2.getEquation().equals(m.getEquation())) {
 					m2.multiplier += m.multiplier;
 					continue out;
 				}
 			}
 			getBalancedLeft().add(
-					new RedoxMolecule(m.eqn, m.charge * rMult, m.multiplier
-							* rMult));
+					new RedoxMolecule(m.getEquation(), m.getOverallCharge(),
+							null, m.multiplier * rMult));
 		}
 		out: for (RedoxMolecule m : reduction.right) {
 			for (RedoxMolecule m2 : getBalancedRight()) {
-				if (m2.eqn.equals(m.eqn)) {
-					m2.charge += m.charge;
+				if (m2.getEquation().equals(m.getEquation())) {
 					m2.multiplier += m.multiplier;
 					continue out;
 				}
 			}
 			getBalancedRight().add(
-					new RedoxMolecule(m.eqn, m.charge * rMult, m.multiplier
-							* rMult));
+					new RedoxMolecule(m.getEquation(), m.getOverallCharge(),
+							null, m.multiplier * rMult));
 		}
 
 		// Combine those equivalent pieces
@@ -428,9 +405,8 @@ public class RedoxEquation {
 			for (RedoxMolecule m2 : list) {
 				if (m == m2) {
 					continue;
-				} else if (m2.eqn.equals(m.eqn)) {
+				} else if (m2.getEquation().equals(m.getEquation())) {
 					m.multiplier += m2.multiplier;
-					m.updateCounts();
 					m2.multiplier = 0;
 				}
 			}
@@ -440,7 +416,9 @@ public class RedoxEquation {
 	private void cancelEquals() {
 		for (RedoxMolecule m : getBalancedLeft()) {
 			for (RedoxMolecule m2 : getBalancedRight()) {
-				if (m.eqn.equals(m2.eqn) && m.charge == m2.charge) {
+				if (m.getEquation().equals(m2.getEquation())
+						&& m.getOverallCharge() * m.multiplier == m2
+								.getOverallCharge() * m2.multiplier) {
 					if (m2.multiplier >= m.multiplier) {
 						m2.multiplier -= m.multiplier;
 						m.multiplier = 0;
@@ -460,23 +438,27 @@ public class RedoxEquation {
 				int count = Integer.MAX_VALUE;
 				for (RedoxMolecule rm : getBalancedLeft()) {
 					try {
-						Element e = Element.valueOf(rm.eqn);
-						if (e != null && m.counts.containsKey(e)
-								&& m.counts.get(e) > 0 && rm.multiplier > 0) {
+						Element e = Element.valueOf(rm.getEquation());
+						if (e != null && m.getElementCounts().containsKey(e)
+								&& m.getElementCounts().get(e) > 0
+								&& rm.multiplier > 0) {
 							claiming.add(rm);
-							count = Math.min(count,
-									rm.multiplier / m.counts.get(e));
+							count = Math.min(count, rm.multiplier
+									/ m.getElementCounts().get(e));
 						}
 					} catch (Exception e) {
 					}
 				}
 				if (count != Integer.MAX_VALUE
-						&& claiming.size() == m.counts.keySet().size()) {
+						&& claiming.size() == m.getElementCounts().keySet()
+								.size()) {
 					// Ok drop those we are using and add the new one
-					getBalancedLeft().add(new RedoxMolecule(m.eqn, 0, count));
+					getBalancedLeft().add(
+							new RedoxMolecule(m.getEquation(), 0, null, count));
 					for (RedoxMolecule mod : claiming) {
 						mod.multiplier -= count
-								* m.counts.get(Element.valueOf(mod.eqn));
+								* m.getElementCounts().get(
+										Element.valueOf(mod.getEquation()));
 					}
 				}
 			}
@@ -485,23 +467,27 @@ public class RedoxEquation {
 				int count = Integer.MAX_VALUE;
 				for (RedoxMolecule rm : getBalancedRight()) {
 					try {
-						Element e = Element.valueOf(rm.eqn);
-						if (e != null && m.counts.containsKey(e)
-								&& m.counts.get(e) > 0 && rm.multiplier > 0) {
+						Element e = Element.valueOf(rm.getEquation());
+						if (e != null && m.getElementCounts().containsKey(e)
+								&& m.getElementCounts().get(e) > 0
+								&& rm.multiplier > 0) {
 							claiming.add(rm);
-							count = Math.min(count,
-									rm.multiplier / m.counts.get(e));
+							count = Math.min(count, rm.multiplier
+									/ m.getElementCounts().get(e));
 						}
 					} catch (Exception e) {
 					}
 				}
 				if (count != Integer.MAX_VALUE
-						&& claiming.size() == m.counts.keySet().size()) {
+						&& claiming.size() == m.getElementCounts().keySet()
+								.size()) {
 					// Ok drop those we are using and add the new one
-					getBalancedRight().add(new RedoxMolecule(m.eqn, 0, count));
+					getBalancedRight().add(
+							new RedoxMolecule(m.getEquation(), 0, null, count));
 					for (RedoxMolecule mod : claiming) {
 						mod.multiplier -= count
-								* m.counts.get(Element.valueOf(mod.eqn));
+								* m.getElementCounts().get(
+										Element.valueOf(mod.getEquation()));
 					}
 				}
 			}

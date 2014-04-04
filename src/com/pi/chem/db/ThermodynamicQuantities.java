@@ -3,6 +3,8 @@ package com.pi.chem.db;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.pi.chem.Molecule;
+
 public class ThermodynamicQuantities {
 	private static class ThermodynamicValue {
 		private float heatFormation;
@@ -10,9 +12,9 @@ public class ThermodynamicQuantities {
 		private float stdEntropy;
 	}
 
-	private static Map<String, ThermodynamicValue> data = new HashMap<String, ThermodynamicValue>();
+	private static Map<Molecule, ThermodynamicValue> data = new HashMap<Molecule, ThermodynamicValue>();
 
-	public static float getHeatOfFormation(String name) {
+	public static float getHeatOfFormation(Molecule name) {
 		ThermodynamicValue val = data.get(name);
 		if (val != null) {
 			return val.heatFormation;
@@ -20,7 +22,7 @@ public class ThermodynamicQuantities {
 		return Float.NaN;
 	}
 
-	public static float getGibbsFreeEnergy(String name) {
+	public static float getGibbsFreeEnergy(Molecule name) {
 		ThermodynamicValue val = data.get(name);
 		if (val != null) {
 			return val.gibbsFreeEnergy;
@@ -28,7 +30,7 @@ public class ThermodynamicQuantities {
 		return Float.NaN;
 	}
 
-	public static float getStandardEntropy(String name) {
+	public static float getStandardEntropy(Molecule name) {
 		ThermodynamicValue val = data.get(name);
 		if (val != null) {
 			return val.stdEntropy / 1000.0f;// J -> kJ
@@ -42,7 +44,7 @@ public class ThermodynamicQuantities {
 		value.heatFormation = (float) heatFormation;
 		value.gibbsFreeEnergy = (float) gibbsFree;
 		value.stdEntropy = (float) stdEntropy;
-		data.put(name, value);
+		data.put(new Molecule(name), value);
 	}
 
 	static {

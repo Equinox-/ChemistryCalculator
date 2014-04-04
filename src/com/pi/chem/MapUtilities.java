@@ -17,13 +17,13 @@ public class MapUtilities {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static void mapSum(Map addTo, Map<?, ?> addIn) {
-		for (Entry e : addIn.entrySet()) {
+	public static void mapSum(Map addTo, Map<?, Integer> addIn, int multiplier) {
+		for (Entry<?, Integer> e : addIn.entrySet()) {
 			if (addTo.containsKey(e.getKey())) {
 				addTo.put(e.getKey(), (Integer) addTo.get(e.getKey())
-						+ (Integer) e.getValue());
+						+ (e.getValue().intValue() * multiplier));
 			} else {
-				addTo.put(e.getKey(), e.getValue());
+				addTo.put(e.getKey(), e.getValue().intValue() * multiplier);
 			}
 		}
 	}

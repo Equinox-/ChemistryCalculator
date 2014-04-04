@@ -1,12 +1,15 @@
 package com.pi.chem;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.pi.chem.db.ThermodynamicQuantities;
 
 public class GenericEquation {
-	private List<Molecule> leftMolecules;
-	private List<Molecule> rightMolecules;
+	public List<Molecule> leftMolecules;
+	public List<Molecule> rightMolecules;
 
 	private float totalFormation = 0;
 	private float totalEntropy = 0;
@@ -16,27 +19,23 @@ public class GenericEquation {
 		if (parts.length != 2) {
 			throw new IllegalArgumentException("Must be an equation...");
 		}
-		leftMolecules = EquationParser.getMoleculesInEquation(parts[0]);
-		rightMolecules = EquationParser.getMoleculesInEquation(parts[1]);
+		leftMolecules = getMoleculesInEquation(parts[0]);
+		rightMolecules = getMoleculesInEquation(parts[1]);
 	}
 
 	public void calculateThermodynamics() {
 		totalFormation = 0;
 		totalEntropy = 0;
 		for (Molecule m : rightMolecules) {
-			String mole = m.getEquation() + "("
-					+ m.getPhase().getAbbreviation() + ")";
-			float heat = ThermodynamicQuantities.getHeatOfFormation(mole);
-			float entropy = ThermodynamicQuantities.getStandardEntropy(mole);
+			float heat = ThermodynamicQuantities.getHeatOfFormation(m);
+			float entropy = ThermodynamicQuantities.getStandardEntropy(m);
 			totalFormation += heat;
 			totalEntropy += entropy;
 
 		}
 		for (Molecule m : leftMolecules) {
-			String mole = m.getEquation() + "("
-					+ m.getPhase().getAbbreviation() + ")";
-			float heat = ThermodynamicQuantities.getHeatOfFormation(mole);
-			float entropy = ThermodynamicQuantities.getStandardEntropy(mole);
+			float heat = ThermodynamicQuantities.getHeatOfFormation(m);
+			float entropy = ThermodynamicQuantities.getStandardEntropy(m);
 			totalFormation -= heat;
 			totalEntropy -= entropy;
 		}
@@ -67,5 +66,30 @@ public class GenericEquation {
 
 	public float getTotalEntropy(float temperature) {
 		return (getEntropy() - (getReactionHeat() / temperature));
+	}
+
+	private static final Pattern MOLECULE_COEFF = Pattern
+			.compile("^([0-9]*)(.*)");
+
+	private static List<Molecule> getMoleculesInEquation(String eq) {
+		String[] parts = eq.split("\\+");
+		List<Molecule> eqn = new ArrayList<Molecule>();
+		for (String s : parts) {
+			Matcher m = MOLECULE_COEFF.matcher(s.trim());
+			if (m.find()) {
+				Molecule mm = new Molecule(m.group(2));
+				int count = 1;
+				if (m.group(1).length() > 0) {
+					try {
+						count = Integer.valueOf(m.group(1));
+					} catch (Exception e) {
+					}
+				}
+				for (int i = 0; i < count; i++) {
+					eqn.add(mm);
+				}
+			}
+		}
+		return eqn;
 	}
 }

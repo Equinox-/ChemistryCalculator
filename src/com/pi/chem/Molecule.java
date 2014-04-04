@@ -9,6 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.pi.chem.db.Element;
+import com.pi.chem.db.ThermodynamicQuantities;
 
 public class Molecule {
 	public enum MoleculeType {
@@ -42,7 +43,15 @@ public class Molecule {
 			s = s.replace("(" + phase.getAbbreviation() + ")", "").trim();
 		}
 		equation = s;
-		explodedEquation = explodeMolecule(s);
+		explodedEquation = explodeElementGroups(s);
+		calculateElementCounts();
+	}
+
+	public Molecule(String eq, float charge, Phase phase) {
+		this.phase = phase;
+		this.overallCharge = charge;
+		this.equation = eq;
+		explodedEquation = explodeElementGroups(eq);
 		calculateElementCounts();
 	}
 
@@ -51,8 +60,7 @@ public class Molecule {
 	}
 
 	public void calculateCharges() {
-		charges = ChargeComputer.getChargesInMolecule(explodedEquation,
-				overallCharge);
+		charges = ChargeComputer.getChargesInMolecule(this);
 	}
 
 	public float getOverallCharge() {
@@ -75,7 +83,7 @@ public class Molecule {
 		return charges;
 	}
 
-	private static String explodeMolecule(String eq) {
+	private static String explodeElementGroups(String eq) {
 		Matcher m = IMPLOSION.matcher(eq);
 		StringBuilder result = new StringBuilder();
 		int tail = 0;
@@ -139,8 +147,16 @@ public class Molecule {
 		}
 	}
 
-	private void calculateMoleculeType() {
+	public float getGibbsFreeEnergy() {
+		return ThermodynamicQuantities.getGibbsFreeEnergy(this);
+	}
 
+	public float getHeatOfFormation() {
+		return ThermodynamicQuantities.getHeatOfFormation(this);
+	}
+
+	public float getStandardEntropy() {
+		return ThermodynamicQuantities.getStandardEntropy(this);
 	}
 
 	public String toString() {

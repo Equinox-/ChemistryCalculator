@@ -1,5 +1,6 @@
 package com.pi.chem;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,21 +10,19 @@ import com.pi.chem.db.Element;
 import com.pi.chem.db.Ion;
 
 public class ChargeComputer {
-
-	private static Map<Element, Float> getChargesInHomoMolecule(String eq,
-			float overall) {
-		List<Element> elements = EquationParser.getElementsInMolecule(eq);
-		Map<Element, Integer> counts = EquationParser
-				.getElementCounts(elements);
+	private static Map<Element, Float> getChargesInHomoMolecule(
+			Molecule molecule) {
+		Map<Element, Integer> counts = Collections.unmodifiableMap(molecule
+				.getElementCounts());
 		HashMap<Element, Integer> idx = new HashMap<Element, Integer>();
-		for (Element e : elements) {
+		for (Element e : counts.keySet()) {
 			idx.put(e, 0);
 		}
 		Map<Element, Float> charges;
 		boolean useRareCharges = false;
 		do {
-			charges = getChargesInHomoMoleculeInternal(elements, counts,
-					overall, idx, useRareCharges);
+			charges = getChargesInHomoMoleculeInternal(counts,
+					molecule.getOverallCharge(), idx, useRareCharges);
 			// Advance by 1
 			boolean broke = false;
 			for (Entry<Element, Integer> o : idx.entrySet()) {
@@ -44,13 +43,14 @@ public class ChargeComputer {
 					useRareCharges = true;
 				}
 			}
-		} while (invalidChargeConfiguration(charges, counts, overall));
+		} while (invalidChargeConfiguration(charges, counts,
+				molecule.getOverallCharge()));
 		return charges;
 	}
 
 	private static Map<Element, Float> getChargesInHomoMoleculeInternal(
-			List<Element> elements, Map<Element, Integer> counts,
-			float overall, Map<Element, Integer> idxs, boolean useRareCharges) {
+			Map<Element, Integer> counts, float overall,
+			Map<Element, Integer> idxs, boolean useRareCharges) {
 		Map<Element, Float> charges = new HashMap<Element, Float>();
 		float missingCharge = overall;
 		if (counts.containsKey(Element.O)) {
@@ -108,16 +108,16 @@ public class ChargeComputer {
 	}
 
 	public static Map<Element, Float> getChargesInIon(Ion i) {
-		return getChargesInHomoMolecule(i.getEquation(), i.getCharges()[0]);
+		return getChargesInHomoMolecule(new Molecule(i.getCharges()[0] + ""
+				+ i.getEquation()));
 	}
 
-	public static Map<Element, Float> getChargesInMolecule(String eq,
-			float overall) {
-		List<Ion> ions = EquationParser.getIonsInMolecule(eq);
+	public static Map<Element, Float> getChargesInMolecule(Molecule molecule) {
+		List<Ion> ions = EquationParser.getIonsInMolecule(molecule);
 		Map<Element, Float> charges = new HashMap<Element, Float>();
 		// Find ionic stuff
-		String s = new String(eq);
-		float iCharge = overall;
+		String s = new String(molecule.getEquation());
+		float iCharge = molecule.getOverallCharge();
 		for (Ion i : ions) {
 			s = s.replace(i.getEquation(), "");
 			iCharge -= i.getCharges()[0];
@@ -125,11 +125,11 @@ public class ChargeComputer {
 				charges.put(e.getKey(), e.getValue());
 			}
 		}
-		MapUtilities.addToMap(charges, getChargesInHomoMolecule(s, iCharge));
-		List<Element> elements = EquationParser.getElementsInMolecule(eq);
-		Map<Element, Integer> counts = EquationParser.getElementCounts(elements);
-		if (invalidChargeConfiguration(charges, counts, overall)) {
-			charges = getChargesInHomoMolecule(eq, overall);
+		Molecule noIonMole = new Molecule(s, iCharge, null);
+		MapUtilities.addToMap(charges, getChargesInHomoMolecule(noIonMole));
+		if (invalidChargeConfiguration(charges, noIonMole.getElementCounts(),
+				noIonMole.getOverallCharge())) {
+			charges = getChargesInHomoMolecule(noIonMole);
 		}
 		return charges;
 	}
@@ -152,8 +152,8 @@ public class ChargeComputer {
 		return overall != totalCharge;
 	}
 
-	public static Map<Element, Float> getChargesInEquation(String eq) {
-		List<Molecule> molecules = EquationParser.getMoleculesInEquation(eq);
+	public static Map<Element, Float> getChargesInEquation(
+			List<Molecule> molecules) {
 		Map<Element, Float> map = new HashMap<Element, Float>();
 		for (Molecule s : molecules) {
 			MapUtilities.addToMap(map, s.getElementCharges());

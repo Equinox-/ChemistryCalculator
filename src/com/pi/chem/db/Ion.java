@@ -1,5 +1,6 @@
 package com.pi.chem.db;
 
+import com.pi.chem.Molecule;
 import com.pi.chem.OxidationNumber;
 
 public enum Ion implements OxidationNumber {
